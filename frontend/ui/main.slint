@@ -1,0 +1,56 @@
+import { MapView }    from "components/map_view.slint";
+import { SearchBar }  from "components/search_bar.slint";
+import { Attribution } from "components/attribution.slint";
+
+export component MainWindow inherits Window {
+    title: "Rakuten Travel – Japan Map Explorer";
+    width: 1024px;
+    height: 768px;
+    min-width:  640px;
+    min-height: 480px;
+    background: #1a2332;
+
+    // ── Properties set from Python ───────────────────────────────────────────
+    in property <image>  map-image;
+    in property <int>    zoom-level:   12;
+    in property <bool>   loading:      false;
+    in property <bool>   searching:    false;
+    in property <string> status-text:  "";
+
+    // ── Callbacks called from Slint → handled in Python ─────────────────────
+    callback search-requested(string);
+    callback map-pan-started();
+    callback map-pan(float, float);         // total dx, dy from press start
+    callback map-zoom(float, float, int);   // mouse-x, mouse-y, direction
+    callback map-resized(float, float);     // new viewport width, height
+    callback report-issue();
+    callback open-copyright();
+
+    VerticalLayout {
+        spacing: 0px;
+
+        // ── Search bar ───────────────────────────────────────────────────────
+        SearchBar {
+            searching:   root.searching;
+            status-text: root.status-text;
+            search-requested(q) => { root.search-requested(q); }
+        }
+
+        // ── Map (fills remaining space) ──────────────────────────────────────
+        MapView {
+            source:      root.map-image;
+            zoom-level:  root.zoom-level;
+            loading:     root.loading;
+            pan-started()          => { root.map-pan-started(); }
+            pan(dx, dy)            => { root.map-pan(dx, dy); }
+            zoom-changed(x, y, d)  => { root.map-zoom(x, y, d); }
+            viewport-resized(w, h) => { root.map-resized(w, h); }
+        }
+
+        // ── Attribution bar (OSM requirement) ───────────────────────────────
+        Attribution {
+            report-issue()    => { root.report-issue(); }
+            open-copyright()  => { root.open-copyright(); }
+        }
+    }
+}

@@ -1,0 +1,8 @@
+# Core UI framework
+slint==1.16.1b1
+
+# Image compositing for tile rendering
+pillow==12.2.0
+
+# HTTP tile and geocoding requests
+requests==2.34.2

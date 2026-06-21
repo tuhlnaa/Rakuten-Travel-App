@@ -1,0 +1,72 @@
+// OSM attribution bar (required by tile usage policy).
+// See: https://www.openstreetmap.org/copyright
+export component Attribution inherits Rectangle {
+    height: 24px;
+    background: #ffffffdd;
+
+    callback report-issue();
+    callback open-copyright();
+
+    HorizontalLayout {
+        padding-left: 8px;
+        padding-right: 8px;
+        spacing: 0px;
+        alignment: center;
+
+        Text {
+            text: "© ";
+            font-size: 11px;
+            color: #444;
+            vertical-alignment: center;
+        }
+
+        copyright-link := TouchArea {
+            width: copyright-text.preferred-width;
+            height: parent.height;
+            mouse-cursor: pointer;
+            clicked => { root.open-copyright(); }
+
+            copyright-text := Text {
+                text: "OpenStreetMap contributors";
+                font-size: 11px;
+                color: #0066cc;
+                vertical-alignment: center;
+            }
+        }
+
+        Text {
+            text: "  |  ";
+            font-size: 11px;
+            color: #aaa;
+            vertical-alignment: center;
+        }
+
+        report-link := TouchArea {
+            width: report-text.preferred-width;
+            height: parent.height;
+            mouse-cursor: pointer;
+            clicked => { root.report-issue(); }
+
+            report-text := Text {
+                text: "Report a map issue";
+                font-size: 11px;
+                color: #0066cc;
+                vertical-alignment: center;
+            }
+        }
+
+        Text {
+            text: "  |  ";
+            font-size: 11px;
+            color: #aaa;
+            vertical-alignment: center;
+        }
+
+        Text {
+            text: "contact@rakuten-travel-map.example.com";
+            font-size: 11px;
+            color: #666;
+            vertical-alignment: center;
+        }
+    }
+}

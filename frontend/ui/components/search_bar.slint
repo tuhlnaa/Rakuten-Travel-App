@@ -1,0 +1,78 @@
+// Top search bar with app branding.
+export component SearchBar inherits Rectangle {
+    height: 50px;
+    background: #1a2332;
+
+    callback search-requested(string);
+    in property <bool> searching: false;
+    in property <string> status-text: "";
+
+    HorizontalLayout {
+        padding-left: 14px;
+        padding-right: 14px;
+        padding-top: 8px;
+        padding-bottom: 8px;
+        spacing: 10px;
+        alignment: center;
+
+        // Branding
+        Text {
+            text: "Rakuten Travel";
+            color: #bf0000;
+            font-size: 17px;
+            font-weight: 700;
+            vertical-alignment: center;
+            width: 145px;
+            overflow: elide;
+        }
+
+        // Search input
+        input := LineEdit {
+            placeholder-text: "Search a location in Japan…";
+            font-size: 14px;
+            enabled: !root.searching;
+            accepted => {
+                if self.text != "" {
+                    root.search-requested(self.text);
+                }
+            }
+        }
+
+        // Search button
+        btn := Rectangle {
+            width: 82px;
+            background: root.searching ? #555 : #bf0000;
+            border-radius: 5px;
+            animate background { duration: 150ms; }
+
+            Text {
+                text: root.searching ? "…" : "Search";
+                color: white;
+                font-size: 13px;
+                font-weight: 600;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+            }
+
+            TouchArea {
+                enabled: !root.searching;
+                mouse-cursor: root.searching ? default : pointer;
+                clicked => {
+                    if input.text != "" {
+                        root.search-requested(input.text);
+                    }
+                }
+            }
+        }
+
+        // Status / result text
+        if root.status-text != "" : Text {
+            text: root.status-text;
+            color: #aac;
+            font-size: 12px;
+            vertical-alignment: center;
+            width: 220px;
+            overflow: elide;
+        }
+    }
+}

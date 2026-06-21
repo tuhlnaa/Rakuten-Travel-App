@@ -216,3 +216,13 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Rakuten Travel – tile cache (populated at runtime, not tracked in git)
+# Actual cache lives in ~/.cache/rakuten-travel/tiles/
+*.tile.png
+
+# Slint compiler artefacts
+*.slint.cache
+
+# Temporary map image written during rendering
+rakuten_travel_map_tmp.png

@@ -1,0 +1,127 @@
+// Interactive map viewport: renders the composited OSM tile image and handles
+// pan (left-drag) and zoom (scroll wheel or +/- buttons).
+export component MapView inherits Rectangle {
+    clip: true;
+    background: #d8d8d8;
+
+    // Tile-composited map image updated from Python
+    in property <image> source;
+    in property <int> zoom-level: 12;
+    in property <bool> loading: false;
+
+    // Python connects these to recalculate tiles and update `source`
+    callback pan-started();
+    callback pan(float, float);           // total (dx, dy) from press start, in px
+    callback zoom-changed(float, float, int); // (mouse-x, mouse-y, +1/-1)
+    callback viewport-resized(float, float);  // (width, height) in px
+
+    // Map image fills the viewport
+    Image {
+        source: root.source;
+        width: parent.width;
+        height: parent.height;
+        image-fit: fill;
+    }
+
+    // Loading spinner text overlay
+    if root.loading : Rectangle {
+        width: 110px;
+        height: 28px;
+        x: (parent.width - self.width) / 2;
+        y: (parent.height - self.height) / 2;
+        background: #000a;
+        border-radius: 6px;
+
+        Text {
+            text: "Loading tiles…";
+            color: white;
+            font-size: 13px;
+            horizontal-alignment: center;
+            vertical-alignment: center;
+        }
+    }
+
+    // Floating zoom buttons (right side, vertically centred)
+    zoom-in-btn := Rectangle {
+        x: parent.width - 44px;
+        y: parent.height / 2 - 40px;
+        width: 34px;
+        height: 34px;
+        background: #fffc;
+        border-radius: 5px;
+        drop-shadow-blur: 4px;
+        drop-shadow-color: #0003;
+
+        Text { text: "+"; font-size: 22px; horizontal-alignment: center; vertical-alignment: center; }
+
+        TouchArea {
+            mouse-cursor: pointer;
+            clicked => { root.zoom-changed(root.width / 2 / 1px, root.height / 2 / 1px, 1); }
+        }
+    }
+
+    zoom-out-btn := Rectangle {
+        x: parent.width - 44px;
+        y: parent.height / 2 + 6px;
+        width: 34px;
+        height: 34px;
+        background: #fffc;
+        border-radius: 5px;
+        drop-shadow-blur: 4px;
+        drop-shadow-color: #0003;
+
+        Text { text: "−"; font-size: 22px; horizontal-alignment: center; vertical-alignment: center; }
+
+        TouchArea {
+            mouse-cursor: pointer;
+            clicked => { root.zoom-changed(root.width / 2 / 1px, root.height / 2 / 1px, -1); }
+        }
+    }
+
+    // Zoom level badge (bottom-left corner)
+    Rectangle {
+        x: 8px;
+        y: parent.height - 28px;
+        width: 66px;
+        height: 20px;
+        background: #fffd;
+        border-radius: 3px;
+
+        Text {
+            text: "Zoom " + root.zoom-level;
+            font-size: 11px;
+            color: #333;
+            horizontal-alignment: center;
+            vertical-alignment: center;
+        }
+    }
+
+    // Pan & scroll interaction (behind the zoom buttons)
+    TouchArea {
+        pointer-event(ev) => {
+            if ev.kind == PointerEventKind.down && ev.button == PointerEventButton.left {
+                root.pan-started();
+            }
+        }
+        moved => {
+            if self.pressed {
+                root.pan(
+                    (self.mouse-x - self.pressed-x) / 1px,
+                    (self.mouse-y - self.pressed-y) / 1px
+                );
+            }
+        }
+        scroll-event(ev) => {
+            root.zoom-changed(
+                self.mouse-x / 1px,
+                self.mouse-y / 1px,
+                ev.delta-y / 1px > 0 ? 1 : -1
+            );
+            return EventResult.accept;
+        }
+    }
+
+    // Notify Python when the map area is resized
+    changed width  => { root.viewport-resized(root.width  / 1px, root.height / 1px); }
+    changed height => { root.viewport-resized(root.width  / 1px, root.height / 1px); }
+}
