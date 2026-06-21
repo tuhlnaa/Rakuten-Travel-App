@@ -155,7 +155,7 @@ class MapApp:
         if not query.strip():
             return
         self._win.searching = True
-        self._win.status_text = f"Searching "{query}"…"
+        self._win.status_text = f"Searching '{query}'…"
 
         def _worker() -> None:
             result = self._geo.get_first(query)
