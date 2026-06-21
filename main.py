@@ -21,11 +21,6 @@ try:
 except ImportError:
     sys.exit("slint package not found – run: pip install slint")
 
-try:
-    from PIL import Image as PILImage
-except ImportError:
-    sys.exit("Pillow not found – run: pip install Pillow")
-
 # ── Internal ─────────────────────────────────────────────────────────────────
 from backend.config import (
     DEFAULT_LAT, DEFAULT_LON, DEFAULT_ZOOM,
@@ -43,28 +38,6 @@ from backend.search.nominatim import NominatimClient
 
 # ── Slint UI file ─────────────────────────────────────────────────────────────
 _UI_FILE = Path(__file__).parent / "frontend" / "ui" / "main.slint"
-
-
-def _pil_to_slint(img: PILImage.Image) -> slint.Image:
-    """
-    Convert a PIL RGBA image to a slint.Image.
-
-    Tries the in-memory RGBA8 API first (Slint ≥ 1.7); falls back to
-    saving a temporary PNG on disk.
-    """
-    rgba = img.convert("RGBA")
-    w, h = rgba.size
-    raw = bytearray(rgba.tobytes())
-
-    try:
-        return slint.Image.create_from_rgba8(w, h, raw)
-    except AttributeError:
-        pass
-
-    # Fallback: write to a fixed temp path and load from disk
-    tmp = Path(tempfile.gettempdir()) / "rakuten_travel_map_tmp.png"
-    rgba.save(tmp, "PNG")
-    return slint.Image.load_from_path(str(tmp))
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -123,19 +96,26 @@ class MapApp:
         def _worker() -> None:
             try:
                 img = self._tiles.render_viewport(lat, lon, zoom, vp_w, vp_h)
-                slint_img = _pil_to_slint(img)
+                # Do CPU-heavy work on the background thread …
+                rgba = img.convert("RGBA")
+                raw_w, raw_h = rgba.size
+                raw_bytes = bytearray(rgba.tobytes())
 
+                # … but create slint.Image on the main/event-loop thread to
+                # satisfy Slint's "ComponentInstance is unsendable" invariant.
                 def _apply() -> None:
                     if self._render_seq == seq:
+                        try:
+                            slint_img = slint.Image.create_from_rgba8(raw_w, raw_h, raw_bytes)
+                        except AttributeError:
+                            tmp = Path(tempfile.gettempdir()) / "rakuten_travel_map_tmp.png"
+                            rgba.save(tmp, "PNG")
+                            slint_img = slint.Image.load_from_path(str(tmp))
                         self._win.map_image = slint_img
                         self._win.zoom_level = zoom
                         self._win.loading = False
 
-                try:
-                    slint.invoke_from_event_loop(_apply)
-                except AttributeError:
-                    # Older Slint Python without invoke_from_event_loop
-                    _apply()
+                slint.native.invoke_from_event_loop(_apply)
             except Exception as exc:
                 print(f"[render] {exc}", file=sys.stderr)
 
@@ -171,10 +151,7 @@ class MapApp:
                 else:
                     self._win.status_text = "No results found"
 
-            try:
-                slint.invoke_from_event_loop(_apply)
-            except AttributeError:
-                _apply()
+            slint.native.invoke_from_event_loop(_apply)
 
         threading.Thread(target=_worker, daemon=True).start()
 
